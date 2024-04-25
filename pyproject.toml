@@ -1,13 +1,16 @@
 [tool.poetry]
 name = "se-335-01-agent-client"
 version = "0.1.0"
-description = "Agent Based Client, Inter-Command Executor"
+description = ""
 authors = ["Orkun Kurul <orkunkurul@webinen.com>"]
 readme = "README.md"
 packages = [{include = "se_335_01_agent_client"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+requests = "^2.31.0"
+platformdirs = "^4.2.1"
+pyjwt = "^2.8.0"
 
 
 [build-system]
