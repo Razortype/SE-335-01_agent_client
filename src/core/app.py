@@ -1,5 +1,6 @@
 
 from pathlib import Path
+from threading import Thread
 
 from service.log_service import LoggerService
 from service.connection_service import ConnectionService
@@ -9,12 +10,23 @@ from core.app_data import AppDataManager, AppData
 
 import core.app_cons as APP_C
 
+from enum import Enum
+
+class AppState(Enum):
+    IDLE = "idle"
+    WORKING = "working"
+    DEBUGGING = "debugging"
+    CRASHED = "crashed"
+
 class App:
 
     _instance = None
     running: bool = False
     connection_service: ConnectionService = None
     attack_executor: AttackExecutor = None
+
+    status_thread: Thread = None
+    app_status: AppState = AppState.IDLE
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -68,6 +80,9 @@ class App:
             app_data = AppData(email, password)
 
         AppDataManager.set_cache(app_data)
+
+    def status_checker(self):
+        pass
 
     @classmethod
     def insert_cache(cls):

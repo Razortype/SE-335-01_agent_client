@@ -25,7 +25,13 @@ class ConnectionService:
         self.headers = {}
         self.cookies = None
 
-    @authorized
+    def check_backend_status(self):
+        try:
+            response = requests.get(self.url)
+            return response.status_code == 200
+        except requests.RequestException:
+            return False
+
     def validate_agent(self, email: str = "", password: str = "") -> bool:
 
         res = self.login(email, password)
