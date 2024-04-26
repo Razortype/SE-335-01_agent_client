@@ -42,7 +42,7 @@ class AttackExecutor:
 
             if self.selected_attack is not None:
                 self.selected_attack.attack()
-                self.remove_attack()
+                self.selected_attack = None
             else:
                 print("No attack set!!")
 

@@ -46,9 +46,10 @@ class AppDataManager:
 
     @classmethod
     def insert_cache(cls) -> None:
-        with open(cls.cache_dir, "rb") as file:
-            app_data: AppData = pickle.load(file)
-        cls.cache = app_data
+        if os.path.isfile(cls.cache_dir):
+            with open(cls.cache_dir, "rb") as file:
+                app_data: AppData = pickle.load(file)
+            cls.cache = app_data
 
     @classmethod
     def is_cache_exist(cls) -> bool:

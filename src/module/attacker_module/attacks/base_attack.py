@@ -7,7 +7,15 @@ class IAttack:
     def attack(self):
         """"""
 
-class Attack:
+    @abstractmethod
+    def attack_helper_function(self):
+        """"""
+
+class Attack(IAttack):
     
     def attack(self):
         raise NotImplementedError("Attack.attack() not implemented!")
+    
+    def attack_helper_function(self):
+        # code your function here
+        pass

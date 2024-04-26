@@ -1,6 +1,8 @@
 
 from module.attacker_module.attacks.base_attack import Attack
 
-class CustomAttack(Attack):
+class CookieAttack(Attack):
+    pass
 
+class KeyloggerAttack(Attack):
     pass
