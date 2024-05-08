@@ -24,6 +24,10 @@ class AppDataManager:
 
     cache: AppData = None
 
+    print("\n~ App Data Manager (Cache)")
+    print("cache dir:", cache_dir)
+    print("is cache exist:", str(os.path.exists(cache_dir)) + "\n")
+
     @classmethod
     def get_cache(cls) -> AppData:
         if cls.cache is None:

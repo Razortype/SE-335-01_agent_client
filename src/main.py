@@ -2,10 +2,8 @@
 from core.app import App
 
 def run():
-
-    App().init()
-    App().commit()
-
+    
+    App().run()
 
 if __name__ == "__main__":
     run()
