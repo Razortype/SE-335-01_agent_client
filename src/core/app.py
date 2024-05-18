@@ -37,7 +37,7 @@ class App:
         self._running = False
         self._connection_service = ConnectionService(app=self, url=APP_C.REST_BASE_URL)
         self._attack_executor = AttackExecutor(self)
-        self._websocket_service = WebSocketClientSevice(self, APP_C.SOCKET_BASE_URL, "/agent/subscribe")
+        self._websocket_service = WebSocketClientSevice(self, APP_C.SOCKET_BASE_URL, "/connect-agent")
         self._status_thread = Thread(target=self._status_checker)
 
     def start(self):
