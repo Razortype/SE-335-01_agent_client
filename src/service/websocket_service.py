@@ -3,6 +3,8 @@ import threading
 import time
 import json
 
+from module.message_handler.message_factory import MessageFactory
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -19,7 +21,7 @@ class WebSocketClientSevice:
 
         self.ws = None
         self.thread = None
-        self.connected = False
+        self.is_connected = False
 
     def connect(self):
         # Create a custom HTTP header containing the authorization token
@@ -38,28 +40,42 @@ class WebSocketClientSevice:
         self.thread.daemon = True
         self.thread.start()
 
+    def disconnect(self):
+
+        if not self.is_connected:
+            print("Not connected to WebSocket server")
+            return
+        
+        self.ws.close()
+        self.thread.join()
+        self.thread = None
+        self.is_connected = False
+
     def on_open(self, ws):
-        print("Connected to WebSocket server")
-        self.connected = True
+        print("Socket: Agent Connected to Server")
+        self.is_connected = True
+        self.app.send_app_init_data()
 
     def on_message(self, ws, message):
-        print(f"Received message: {message}")
+        print(message)
+        conv_message = MessageFactory.parse_custom_message(message)
+        if not conv_message:
+            print("Received Message Invalid")
+            return
+
+        self.app.handle_message(conv_message)
 
     def on_error(self, ws, error):
         print(f"Error: {error}")
 
     def on_close(self, ws, close_status_code, close_reason):
         print("Connection closed")
-        self.connected = False
+        self.disconnect()
 
     def send_message(self, message):
-        if self.connected:
-            self.ws.send(message)
-        else:
+        
+        if not self.connect:
             print("Not connected to WebSocket server")
+            return
 
-    def close(self):
-        if self.connected:
-            self.ws.close()
-        else:
-            print("Not connected to WebSocket server")
+        self.ws.send(message)

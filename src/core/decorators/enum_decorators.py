@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Type
 
 def from_string(cls):
     """
@@ -9,7 +10,7 @@ def from_string(cls):
         raise TypeError("add_from_string decorator can only be applied to Enum classes.")
 
     @classmethod
-    def from_string(cls, value, raise_error=True):
+    def from_string(cls: Type[Enum], value, raise_error=True):
         """
         Converts a string value (lowercase) to the corresponding enum member.
         Raises ValueError if no matching member found (if raise_error is True).

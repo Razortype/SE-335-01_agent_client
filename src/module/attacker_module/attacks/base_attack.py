@@ -1,6 +1,13 @@
 
 from abc import ABC, abstractmethod
 
+from module.attacker_module.enums.attack_status import AttackStatus
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from module.attacker_module.attack_executor import AttackExecutor
+
 class IAttack:
 
     @abstractmethod
@@ -8,14 +15,24 @@ class IAttack:
         """"""
 
     @abstractmethod
-    def attack_helper_function(self):
+    def job(self):
         """"""
 
 class Attack(IAttack):
+
+    def __init__(self, executor: "AttackExecutor", attack_payload) -> None:
+        self.executor = executor
+        self.attack_payload = attack_payload
     
     def attack(self):
-        raise NotImplementedError("Attack.attack() not implemented!")
+        self.executor._attack_status = AttackStatus.EXECUTING
+        
+        try:
+            self.job()
+        except Exception as e:
+            print("UEO: " + e)
+
+        self.executor._attack_status = AttackStatus.DONE
     
-    def attack_helper_function(self):
-        # code your function here
-        pass
+    def job(self):
+        raise NotImplementedError("Attack.job() not implemented!")

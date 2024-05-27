@@ -3,21 +3,37 @@ from pathlib import Path
 from threading import Thread
 import time
 import os
-
-from typing import List
+import signal
+import sys
+from datetime import datetime
+import json
 
 from service.log_service import LoggerService
 from service.connection_service import ConnectionService
 from service.websocket_service import WebSocketClientSevice
 from module.attacker_module.attack_executor import AttackExecutor
 
+from module.message_handler.enums.message_type import MessageType
+from module.message_handler.message_factory import MessageFactory
+from module.message_handler.messages.payloads.agent_info_payload import AgentInformationPayload
+from module.message_handler.messages.payloads.agent_init_payload import AgentInitializationPayload
+from module.message_handler.messages.payloads.attack_conf_payload import AttackConfirmationPayload
+
 from core.app_data import AppDataManager, AppData
 
 from core.enums.server_request_state import ServerRequestState
 from core.enums.app_profile import AppProfile
+from core.enums.agent_status import AgentStatus
 import core.app_cons as APP_C
 
+from typing import List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from module.message_handler.messages.base_message import CustomMessage
+    from module.attacker_module.attack_executor import Attack
+
 class App:
+
     _instance = None
     _running: bool = False
     _connection_service: ConnectionService = None
@@ -25,16 +41,21 @@ class App:
     _websocket_service: WebSocketClientSevice = None
     _status_thread: Thread = None
     _server_status: ServerRequestState = ServerRequestState.CLOSED
+    _agent_status: AgentStatus = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls, *args, **kwargs)
             cls._instance._init_services()
+        
+            cls._instance._init_signal()
+
         return cls._instance
 
     def _init_services(self):
         """Initializes services."""
         self._running = False
+        self._agent_status = AgentStatus.IDLE
         self._connection_service = ConnectionService(app=self, url=APP_C.REST_BASE_URL)
         self._attack_executor = AttackExecutor(self)
         self._websocket_service = WebSocketClientSevice(self, APP_C.SOCKET_BASE_URL, "/connect-agent")
@@ -55,7 +76,7 @@ class App:
         self._attack_executor.stop()
         self._running = False
         self._status_thread.join()
-        self._websocket_service.close()
+        self._websocket_service.disconnect()
 
     def run(self):
         """Runs the app."""
@@ -67,6 +88,7 @@ class App:
 
     def print_app_state(self):
         """Prints the current state of the app and services."""
+
         print("~~ APP STATE ~~")
         print(f"Running: {self._running}")
         print(f"Server Status: {self._server_status}")
@@ -89,22 +111,71 @@ class App:
         if profile is None:
             profile = AppProfile.DEV
         return profile
+    
+    def send_app_init_data(self):
+
+        custom_message = MessageFactory.create_agent_initialization_message(
+            "Agent initializing message",
+            AgentInitializationPayload(None, 
+                                       AppDataManager.cache.email, 
+                                       datetime.now()))
+        message = MessageFactory.compose_message(custom_message)
+        self._websocket_service.send_message(message)
+
+        self.send_app_info_data()
+
+    def send_app_info_data(self):
+        
+        if (not self._websocket_service.is_connected): return
+
+        custom_message = MessageFactory.create_agent_information_message(
+            "Agent information message",
+            AgentInformationPayload(None, 
+                                    self._agent_status,
+                                    getattr(self._attack_executor.get_current(), 'attack_payload', None),
+                                    self._attack_executor.get_queue_len(),
+                                    self._connection_service.access_token,
+                                    [i.attack_payload for i in self._attack_executor.get_execution_history()]))
+        message = MessageFactory.compose_message(custom_message)
+        self._websocket_service.send_message(message)
+
+    def handle_message(self, message: "CustomMessage"):
+
+        if (message.message_type == MessageType.ATTACK_PACKAGE):
+            self._attack_executor.submit_attack(message)
+        else:
+            print("Message not comprimised: " + message.message_type.name())
+
+    def confirm_attack(self, attack: "Attack"):
+        
+        custom_message = MessageFactory.create_attack_confirmation_message(
+            "Agent attack confirmation message",
+            AttackConfirmationPayload(None,
+                                      attack.attack_payload.attack_job_id,
+                                      attack.attack_payload.attack_type,
+                                      datetime.now()))
+        message = MessageFactory.compose_message(custom_message)
+        self._websocket_service.send_message(message)
 
     def _commit(self):
         """Commits the app."""
         
-        counter = 1
-        while self._running and counter < 6:
-
-            print("-------------------")
-            print(f"~> STATE COUNTER: {counter}")
+        while True:
             self.print_state()
-
             time.sleep(APP_C.ONE_COMMIT_CLICK)
-            counter += 1
+
+        # counter = 1
+        # while self._running and counter < 6:
+
+        #     print("-------------------")
+        #     print(f"~> STATE COUNTER: {counter}")
+        #     self.print_state()
+        #     self.send_app_info_data()
+        #     time.sleep(APP_C.ONE_COMMIT_CLICK)
+        #     counter += 1
         
-        print("~> STOPPING..")
-        self.stop()
+        # print("~> STOPPING..")
+        # self.stop()
 
     def _initialise_new(self):
         """Initializes a new app."""
@@ -145,6 +216,15 @@ class App:
             self._connection_service.print_state()
             time.sleep(APP_C.STUCK_CHECK_INTERVAL)
 
+    def _init_signal(self):
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+    
+    def signal_handler(self, sig, frame):
+        print('Signal received, stopping...')
+        self.stop()
+        sys.exit(0)
+
     @property
     def running(self):
         """Returns the running status of the app."""
@@ -154,6 +234,15 @@ class App:
     def server_status(self):
         """Returns the server status of the app."""
         return self._server_status
+    
+    @property
+    def agent_status(self):
+        return self.agent_status
+
+    @agent_status.setter
+    def agent_status(self, agent_status: AgentStatus):
+        self._agent_status = agent_status
+        self.send_app_info_data()
 
     @classmethod
     def insert_cache(cls):
