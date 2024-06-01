@@ -62,12 +62,14 @@ class AttackExecutor:
             self.attack_pool.remove(attack)
 
     def pick_attack(self):
-        
-        if self.selected_attack is not None: return
+
         if self._attack_status == AttackStatus.DONE:
             self._attack_history.append(self.selected_attack)
             self.selected_attack = None
-        if self._attack_status != AttackStatus.IDLE: return
+            self._attack_status = AttackStatus.IDLE
+
+        if self._attack_status != AttackStatus.IDLE: 
+            return
         
         if self.attack_pool and self.selected_attack == None:
             self.selected_attack = self.attack_pool.pop(0)
@@ -79,6 +81,7 @@ class AttackExecutor:
             if self.app.server_status == ServerRequestState.WORKING and self.app._agent_status == AgentStatus.IDLE:
                 
                 self.pick_attack()
+                
                 if self.selected_attack is not None:
                     self.selected_attack.attack()
                          

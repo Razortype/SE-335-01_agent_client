@@ -12,6 +12,9 @@ requests = "^2.31.0"
 platformdirs = "^4.2.1"
 pyjwt = "^2.8.0"
 websocket-client = "^1.8.0"
+cryptography = "^42.0.7"
+keyring = "^25.2.1"
+browser-cookie3 = "^0.19.1"
 
 
 [build-system]

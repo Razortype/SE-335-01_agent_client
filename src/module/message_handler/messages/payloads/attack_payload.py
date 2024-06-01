@@ -25,3 +25,4 @@ class AttackPayload(BasePayload):
             "attack_description": self.attack_description,
             "attack_type": self.attack_type.name,
             "executed_at": self.format_datetime(self.executed_at)})
+        return dict_rep

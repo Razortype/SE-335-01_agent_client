@@ -18,6 +18,9 @@ from module.message_handler.message_factory import MessageFactory
 from module.message_handler.messages.payloads.agent_info_payload import AgentInformationPayload
 from module.message_handler.messages.payloads.agent_init_payload import AgentInitializationPayload
 from module.message_handler.messages.payloads.attack_conf_payload import AttackConfirmationPayload
+from module.attack_logging_module.log_queue import LogQueue
+from module.attack_logging_module.log_processor import LogProcessor
+from module.attack_logging_module.log_service import LoggerService
 
 from core.app_data import AppDataManager, AppData
 
@@ -38,6 +41,8 @@ class App:
     _running: bool = False
     _connection_service: ConnectionService = None
     _attack_executor: AttackExecutor = None
+    _log_service: LoggerService = None
+    _log_processor: LogProcessor = None
     _websocket_service: WebSocketClientSevice = None
     _status_thread: Thread = None
     _server_status: ServerRequestState = ServerRequestState.CLOSED
@@ -58,6 +63,8 @@ class App:
         self._agent_status = AgentStatus.IDLE
         self._connection_service = ConnectionService(app=self, url=APP_C.REST_BASE_URL)
         self._attack_executor = AttackExecutor(self)
+        self._log_service = LoggerService.get_logger()
+        self._log_processor = LogProcessor(self._connection_service, self._log_service.log_queue)
         self._websocket_service = WebSocketClientSevice(self, APP_C.SOCKET_BASE_URL, "/connect-agent")
         self._status_thread = Thread(target=self._status_checker)
 
@@ -65,6 +72,7 @@ class App:
         """Starts the app."""
         self._running = True
         self._attack_executor.start()
+        self._log_processor.start()
         self._status_thread.start()
         self._stuck_to_preceed(ServerRequestState.CLOSED)
         if not AppDataManager.is_cache_exist() or not self._connection_service.validate_agent():
@@ -74,6 +82,7 @@ class App:
     def stop(self):
         """Stops the app."""
         self._attack_executor.stop()
+        self._log_processor.stop()
         self._running = False
         self._status_thread.join()
         self._websocket_service.disconnect()
@@ -128,23 +137,22 @@ class App:
         
         if (not self._websocket_service.is_connected): return
 
+        current_attack = self._attack_executor.get_current()
+        if (current_attack):
+            current_attack = current_attack.attack_payload
+
         custom_message = MessageFactory.create_agent_information_message(
             "Agent information message",
             AgentInformationPayload(None, 
                                     self._agent_status,
-                                    getattr(self._attack_executor.get_current(), 'attack_payload', None),
+                                    current_attack,
                                     self._attack_executor.get_queue_len(),
                                     self._connection_service.access_token,
                                     [i.attack_payload for i in self._attack_executor.get_execution_history()]))
+
         message = MessageFactory.compose_message(custom_message)
+        
         self._websocket_service.send_message(message)
-
-    def handle_message(self, message: "CustomMessage"):
-
-        if (message.message_type == MessageType.ATTACK_PACKAGE):
-            self._attack_executor.submit_attack(message)
-        else:
-            print("Message not comprimised: " + message.message_type.name())
 
     def confirm_attack(self, attack: "Attack"):
         
@@ -152,30 +160,28 @@ class App:
             "Agent attack confirmation message",
             AttackConfirmationPayload(None,
                                       attack.attack_payload.attack_job_id,
+                                      self._attack_executor._attack_status,
                                       attack.attack_payload.attack_type,
                                       datetime.now()))
+
         message = MessageFactory.compose_message(custom_message)
         self._websocket_service.send_message(message)
 
+    def handle_message(self, message: "CustomMessage"):
+
+        if (message.message_type == MessageType.ATTACK_PACKAGE):
+            self._attack_executor.submit_attack(message.payload)
+        else:
+            print("Message not comprimised: " + message.message_type.name())
+
     def _commit(self):
         """Commits the app."""
-        
-        while True:
-            self.print_state()
+
+        while self._running:
+
+            # self.print_state()
+            self.send_app_info_data()
             time.sleep(APP_C.ONE_COMMIT_CLICK)
-
-        # counter = 1
-        # while self._running and counter < 6:
-
-        #     print("-------------------")
-        #     print(f"~> STATE COUNTER: {counter}")
-        #     self.print_state()
-        #     self.send_app_info_data()
-        #     time.sleep(APP_C.ONE_COMMIT_CLICK)
-        #     counter += 1
-        
-        # print("~> STOPPING..")
-        # self.stop()
 
     def _initialise_new(self):
         """Initializes a new app."""

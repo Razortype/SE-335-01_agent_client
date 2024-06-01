@@ -89,10 +89,6 @@ class MessageFactory:
         payload_data = data["payload"]
         
         if (message_type == None): return None
-        
-        print(50*"*")
-        print(payload_data["attack_type"])
-        print(50*"*")
 
         payload: BasePayload
 
@@ -117,4 +113,4 @@ class MessageFactory:
     
     @staticmethod
     def uuid_from_str(_id: str) -> UUID:
-        return uuid.uuid5(uuid.NAMESPACE_DNS, _id)
+        return UUID(_id)

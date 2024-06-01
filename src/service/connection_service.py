@@ -1,4 +1,5 @@
 import requests
+from requests import Request
 from requests import Response
 from typing import List, TYPE_CHECKING
 import jwt
@@ -87,6 +88,27 @@ class ConnectionService:
             self._access_token = res.json().get("access_token", None)
             self.cookies = res.cookies
             self.headers["Authorization"] = f"Bearer {self._access_token}"
+
+    def send_request(self, *requests_queue: List[Request], auth = True):
+        for request in requests_queue:
+            try:
+                self._set_request_init(request)
+                if auth:
+                    request.headers.update(self.headers)
+
+                response = requests.request(request.method, request.url, headers=request.headers, json=request.data)
+                if response.status_code != 200:
+                    print("Error: " + response.text)
+
+            except Exception as e:
+                print(f"Error sending request to {request.url}: {e}")
+    
+    def _set_request_init(self, request: Request):
+
+        if not request.data:
+            request.data = {}
+        if not request.headers:
+            request.headers = {}
 
     def print_state(self):
         """Prints the current status of the connection."""
