@@ -57,7 +57,6 @@ class WebSocketClientSevice:
         self.app.send_app_init_data()
 
     def on_message(self, ws, message):
-        print(message)
         conv_message = MessageFactory.parse_custom_message(message)
         if not conv_message:
             print("Received Message Invalid")

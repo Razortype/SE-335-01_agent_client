@@ -1,6 +1,7 @@
 from typing import List, Optional, TYPE_CHECKING
 import time
 from threading import Thread, Event
+from uuid import UUID
 
 from module.attacker_module.attacks.base_attack import Attack
 from module.attacker_module.attacks.custom_attack import CookieAttack, FileFolderDiscoveryAttack
@@ -40,6 +41,10 @@ class AttackExecutor:
 
     def submit_attack(self, payload: AttackPayload):
         
+        if self.check_payload_exist(payload.attack_job_id):
+            print("Attack already exist: " + str(payload.attack_job_id))
+            return
+
         attack: Attack
         if payload.attack_type == AttackType.COOKIE_DISCOVERY:
             attack = CookieAttack(self, payload)
@@ -104,3 +109,13 @@ class AttackExecutor:
     
     def get_execution_history(self):
         return self._attack_history
+    
+    def check_payload_exist(self, attack_job_id: UUID):
+        
+        ids = []
+        if (self.selected_attack):
+            ids.append(self.selected_attack.attack_payload.attack_job_id)
+        for attack in self.attack_pool:
+            ids.append(attack.attack_payload.attack_job_id)
+        
+        return attack_job_id in ids

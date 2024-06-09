@@ -91,6 +91,15 @@ class MessageFactory:
         if (message_type == None): return None
 
         payload: BasePayload
+        
+        "%Y-%m-%dT%H:%M:%S.%f"
+
+        executed_at = None
+        try:
+            executed_at = datetime.strptime(payload_data["executed_at"], "%Y-%m-%dT%H:%M:%S")
+            executed_at = datetime.strptime(payload_data["executed_at"], "%Y-%m-%dT%H:%M:%S.%f")
+        except Exception as e:
+            pass
 
         if message_type == MessageType.ATTACK_PACKAGE:
             payload = AttackPayload(
@@ -100,7 +109,7 @@ class MessageFactory:
                 attack_name = payload_data["attack_name"],
                 attack_description = payload_data["attack_description"],
                 attack_type = AttackType.from_string(payload_data["attack_type"]),
-                executed_at = datetime.strptime(payload_data["executed_at"], "%Y-%m-%dT%H:%M:%S.%f"))
+                executed_at = executed_at)
         else: return None
 
         return CustomMessage(

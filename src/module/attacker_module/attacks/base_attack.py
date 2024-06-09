@@ -2,7 +2,9 @@
 from abc import ABC, abstractmethod
 
 from module.attacker_module.enums.attack_status import AttackStatus
+from core.enums.agent_status import AgentStatus
 from module.attack_logging_module.log_service import LoggerService
+import time
 
 from typing import TYPE_CHECKING
 
@@ -48,6 +50,7 @@ class Attack(IAttack):
     
     def attack(self):
         self.executor._attack_status = AttackStatus.EXECUTING
+        self.executor.app._agent_status = AgentStatus.WORKING
         self.debug("Attack Status set as AttackStatus.EXECUTING")
         
         try:
@@ -57,7 +60,11 @@ class Attack(IAttack):
             self.logger.error("UEO: " + str(e), self._get_block_id())
             self.executor_attack_status = AttackStatus.CRASHED
 
+        while not self.logger.log_queue.empty():
+            time.sleep(0.5)
+
         self.executor._attack_status = AttackStatus.DONE
+        self.executor.app._agent_status = AgentStatus.IDLE
         self.debug("Attack Status set as AttackStatus.DONE")
     
     def job(self):
