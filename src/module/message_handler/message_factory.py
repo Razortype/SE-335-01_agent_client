@@ -4,6 +4,8 @@ from uuid import UUID
 from datetime import datetime
 import json
 
+from service.date_service import DateService
+
 from module.message_handler.messages.base_message import CustomMessage
 from module.message_handler.messages.payloads.base_payload import BasePayload
 
@@ -66,7 +68,7 @@ class MessageFactory:
             message_id=uuid.uuid4(), 
             message=message,
             message_type=message_type,
-            creation_date=datetime.now(),
+            creation_date=DateService.now(),
             payload=payload)
     
     @classmethod

@@ -11,6 +11,7 @@ import json
 from service.log_service import LoggerService
 from service.connection_service import ConnectionService
 from service.websocket_service import WebSocketClientSevice
+from service.date_service import DateService
 from module.attacker_module.attack_executor import AttackExecutor
 
 from module.message_handler.enums.message_type import MessageType
@@ -127,7 +128,7 @@ class App:
             "Agent initializing message",
             AgentInitializationPayload(None, 
                                        AppDataManager.cache.email, 
-                                       datetime.now()))
+                                       DateService.now()))
         message = MessageFactory.compose_message(custom_message)
         self._websocket_service.send_message(message)
 
@@ -162,7 +163,7 @@ class App:
                                       attack.attack_payload.attack_job_id,
                                       self._attack_executor._attack_status,
                                       attack.attack_payload.attack_type,
-                                      datetime.now()))
+                                      DateService.now()))
 
         message = MessageFactory.compose_message(custom_message)
         self._websocket_service.send_message(message)
